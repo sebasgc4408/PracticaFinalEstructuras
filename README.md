@@ -34,6 +34,18 @@ The C++ program also includes a local visualization mode:
 ./PracticaII --visualizar
 ```
 
+## Predefined Dataset
+
+The repository includes a predefined dataset:
+
+```text
+datos/dataset_predefinido.csv
+```
+
+It contains bounded integer values separated by commas. The program can also
+read any compatible `.csv` or `.txt` file with integers separated by commas,
+semicolons, tabs, spaces, or line breaks.
+
 ## Algorithms Implemented
 
 ### DialSort-Counting
@@ -167,6 +179,24 @@ Uses the mandatory practice range:
 ./PracticaII --csv
 ```
 
+### Predefined Dataset
+
+```bash
+./PracticaII --archivo datos/dataset_predefinido.csv
+```
+
+PowerShell:
+
+```powershell
+.\PracticaII.exe --archivo datos\dataset_predefinido.csv
+```
+
+You can also use:
+
+```bash
+./PracticaII --dataset datos/dataset_predefinido.csv
+```
+
 ### Visualization
 
 ```bash
@@ -216,6 +246,7 @@ too large for a histogram to be memory-efficient.
 ## Reproducibility
 
 - Source file: `PracticaII.cpp`
+- Sample dataset: `datos/dataset_predefinido.csv`
 - Language standard: C++17
 - Seed: `20260321`
 - Timing: `std::chrono::high_resolution_clock`
