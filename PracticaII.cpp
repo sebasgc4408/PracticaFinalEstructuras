@@ -21,6 +21,7 @@
  *   ./PracticaII --grande        (hasta 10 millones de elementos)
  *   ./PracticaII --csv           (salida CSV para exportar datos)
  *   ./PracticaII --visualizar    (muestra comportamiento interno)
+ *   ./PracticaII --archivo datos/dataset_predefinido.csv
  * ================================================================
  */
 
@@ -30,12 +31,14 @@
 #include <cstddef>
 #include <cstdint>
 #include <cstdlib>
+#include <fstream>
 #include <functional>
 #include <iomanip>
 #include <iostream>
 #include <limits>
 #include <numeric>
 #include <random>
+#include <sstream>
 #include <string>
 #include <utility>
 #include <vector>
@@ -79,6 +82,59 @@ static const char* nombre_compilador()
 #else
     return "desconocido";
 #endif
+}
+
+static string valor_arg(int argc, char** argv, const string& arg)
+{
+    for (int i = 1; i + 1 < argc; ++i)
+        if (argv[i] == arg) return argv[i + 1];
+    return "";
+}
+
+static bool cargar_dataset_archivo(const string& ruta, vector<int>& datos)
+{
+    ifstream archivo(ruta);
+    if (!archivo) {
+        cerr << "[ERROR] No se pudo abrir el dataset: " << ruta << "\n";
+        return false;
+    }
+
+    datos.clear();
+    string linea;
+    size_t linea_actual = 0;
+
+    while (getline(archivo, linea)) {
+        ++linea_actual;
+        for (char& ch : linea) {
+            if (ch == ',' || ch == ';' || ch == '\t')
+                ch = ' ';
+        }
+
+        istringstream iss(linea);
+        long long valor = 0;
+        while (iss >> valor) {
+            if (valor < numeric_limits<int>::min() ||
+                valor > numeric_limits<int>::max()) {
+                cerr << "[ERROR] Valor fuera del rango int en linea "
+                     << linea_actual << ": " << valor << "\n";
+                return false;
+            }
+            datos.push_back(static_cast<int>(valor));
+        }
+
+        if (!iss.eof()) {
+            cerr << "[ERROR] Token invalido en el dataset, linea "
+                 << linea_actual << "\n";
+            return false;
+        }
+    }
+
+    if (datos.empty()) {
+        cerr << "[ERROR] El dataset esta vacio: " << ruta << "\n";
+        return false;
+    }
+
+    return true;
 }
 
 // Estadisticas descriptivas sobre un vector de tiempos en ns
@@ -666,6 +722,9 @@ int main(int argc, char** argv)
     const bool modo_grande    = tiene_arg(argc, argv, "--grande");
     const bool modo_csv       = tiene_arg(argc, argv, "--csv");
     const bool modo_visualizar = tiene_arg(argc, argv, "--visualizar");
+    string ruta_dataset = valor_arg(argc, argv, "--archivo");
+    if (ruta_dataset.empty())
+        ruta_dataset = valor_arg(argc, argv, "--dataset");
 
     // --- Visualizacion del comportamiento interno ---
     if (modo_visualizar) {
@@ -704,6 +763,79 @@ int main(int argc, char** argv)
     const FnOrdenamiento fn_quick = [](vector<int>& a, int U) {
         return quicksort(a, U);
     };
+
+    if (!ruta_dataset.empty()) {
+        vector<int> base;
+        if (!cargar_dataset_archivo(ruta_dataset, base))
+            return EXIT_FAILURE;
+
+        const auto [mn_it, mx_it] = minmax_element(base.begin(), base.end());
+        const auto [ok_u, U64] = tamano_universo(*mn_it, *mx_it);
+        const int U_dataset = ok_u ? static_cast<int>(U64) : -1;
+
+        cout << "================================================================\n"
+             << "  ST0245 - PRACTICA II: ANALISIS EXPERIMENTAL\n"
+             << "  DialSort-Counting vs. QuickSort-3Way\n"
+             << "================================================================\n"
+             << "  Compilador      : " << nombre_compilador() << "\n"
+             << "  Estandar        : C++17\n"
+             << "  Calentamiento   : " << RONDAS_CALENTAMIENTO << " rondas descartadas\n"
+             << "  Medicion        : mejor de " << RONDAS_MEDICION << " rondas\n"
+             << "  Modo            : dataset predefinido\n"
+             << "  Archivo         : " << ruta_dataset << "\n"
+             << "  N               : " << base.size() << "\n"
+             << "  Rango real      : [" << *mn_it << ", " << *mx_it << "]\n"
+             << "  U detectado     : " << (ok_u ? to_string(U64) : string("fuera de dominio")) << "\n"
+             << "================================================================\n\n";
+
+        imprimir_encabezado();
+
+        auto fila_quick = ejecutar_uno(
+            "QuickSort-3Way", "archivo", base, U_dataset,
+            fn_quick, memoria_quicksort_kb(base.size()));
+
+        auto fila_dial = ejecutar_uno(
+            "DialSort-Counting", "archivo", base, U_dataset,
+            fn_dial, memoria_dialsort_kb(base));
+
+        double ratio = 0.0;
+        if (!fila_dial.omitido && !fila_quick.omitido &&
+            fila_quick.stats.mejor_ms > 0.0) {
+            ratio = fila_dial.stats.mejor_ms / fila_quick.stats.mejor_ms;
+            fila_dial.ratio_dial_quick = ratio;
+        }
+
+        imprimir_fila(fila_dial);
+        imprimir_fila(fila_quick);
+
+        cout << "\n================================================================\n"
+             << "  RESUMEN DATASET PREDEFINIDO\n"
+             << "================================================================\n"
+             << fixed << setprecision(3)
+             << "  Configuraciones medidas            : "
+             << ((!fila_dial.omitido && !fila_quick.omitido) ? 1 : 0) << "\n"
+             << "  Ratio Dial/Quick                    : "
+             << (ratio > 0.0 ? ratio : 0.0) << "x\n"
+             << "  Verificacion de correctitud         : "
+             << ((fila_dial.correcto && fila_quick.correcto) ? "TODOS CORRECTOS" : "HAY FALLOS")
+             << "\n\n";
+
+        imprimir_analisis_complejidad();
+
+        if (modo_csv) {
+            cout << "\n================================================================\n"
+                 << "  SALIDA CSV\n"
+                 << "================================================================\n"
+                 << "algoritmo,distribucion,N,U,mejor_ms,media_ms,desv_ms,"
+                    "M_claves_s,memoria_kb,ratio_dial_quick,correcto\n";
+            fila_csv(fila_dial);
+            fila_csv(fila_quick);
+        }
+
+        return (fila_dial.correcto && fila_quick.correcto)
+            ? EXIT_SUCCESS
+            : EXIT_FAILURE;
+    }
 
     // --- Encabezado general ---
     cout << "================================================================\n"
