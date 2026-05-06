@@ -5,6 +5,10 @@ School of Applied Sciences and Engineering, EAFIT University
 Lecturer: Alexander Narvaez Berrio  
 April 2026
 
+## Student
+
+Delivered by student Sebastian Guerrero Cataño.
+
 ## Objective
 
 This project implements and analyzes a C++ benchmark comparing DialSort with an
