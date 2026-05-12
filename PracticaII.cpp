@@ -71,6 +71,14 @@ static constexpr ptrdiff_t CORTE_INSERCION     = 24;
 //  UTILIDADES
 // ================================================================
 
+// UTILIDADES GENERALES
+// Funciones auxiliares para:
+// - medir tiempo en nanosegundos
+// - verificar si un vector quedó ordenado
+// - detectar compilador
+// - leer argumentos de consola
+// - cargar datasets desde archivo
+
 static int64_t ahora_ns()
 {
     using namespace chrono;
@@ -207,13 +215,6 @@ static size_t memoria_quicksort_kb(size_t n)
     return (n * sizeof(int) + static_cast<size_t>(log2(n + 1)) * 64) / 1024;
 }
 
-// UTILIDADES GENERALES
-// Funciones auxiliares para:
-// - medir tiempo en nanosegundos
-// - verificar si un vector quedó ordenado
-// - detectar compilador
-// - leer argumentos de consola
-// - cargar datasets desde archivo
 
 // ESTADÍSTICAS
 // Guarda y calcula métricas del benchmark:
@@ -302,6 +303,13 @@ static bool dialsort(vector<int>& arreglo)
  *      Garantiza pila O(log n).
  *   Costo promedio: O(n log n) | Peor caso: O(n^2) (muy raro)
  */
+
+
+// INSERTION SORT
+// Se usa dentro de QuickSort cuando la partición es pequeña.
+// Para arreglos pequeños suele ser más eficiente que seguir
+// particionando recursivamente.
+
 static void ordenamiento_insercion(vector<int>& arreglo,
                                    ptrdiff_t inicio,
                                    ptrdiff_t fin)
@@ -317,6 +325,13 @@ static void ordenamiento_insercion(vector<int>& arreglo,
     }
 }
 
+// MEDIANA DE TRES
+// Escoge como pivote la mediana entre:
+// - primer elemento
+// - elemento central
+// - último elemento
+// Esto reduce la probabilidad del peor caso en QuickSort.
+
 static int mediana_de_tres(int x, int y, int z)
 {
     if (x < y) {
@@ -326,6 +341,16 @@ static int mediana_de_tres(int x, int y, int z)
     if (x < z) return x;
     return y < z ? z : y;
 }
+
+
+// QUICKSORT 3-WAY
+// Implementa QuickSort con partición en tres zonas:
+// - menores que el pivote
+// - iguales al pivote
+// - mayores que el pivote
+// Es eficiente cuando hay muchos valores repetidos.
+// Además, recurre primero sobre el lado más pequeño para limitar
+// el uso de pila.
 
 static void quicksort_3way(vector<int>& arreglo,
                            ptrdiff_t inicio,
@@ -378,30 +403,17 @@ static bool quicksort(vector<int>& arreglo, int /*U*/)
     return true;
 }
 
-// INSERTION SORT
-// Se usa dentro de QuickSort cuando la partición es pequeña.
-// Para arreglos pequeños suele ser más eficiente que seguir
-// particionando recursivamente.
-
-// MEDIANA DE TRES
-// Escoge como pivote la mediana entre:
-// - primer elemento
-// - elemento central
-// - último elemento
-// Esto reduce la probabilidad del peor caso en QuickSort.
-
-// QUICKSORT 3-WAY
-// Implementa QuickSort con partición en tres zonas:
-// - menores que el pivote
-// - iguales al pivote
-// - mayores que el pivote
-// Es eficiente cuando hay muchos valores repetidos.
-// Además, recurre primero sobre el lado más pequeño para limitar
-// el uso de pila.
-
 // ================================================================
 //  GENERADORES DE DATOS
 // ================================================================
+
+// Crean arreglos de prueba con distintas distribuciones:
+// - uniforme
+// - sesgada
+// - ordenada
+// - inversa
+// Sirven para comparar cómo se comportan los algoritmos en
+// diferentes escenarios.
 
 /*
  * Uniforme: cada clave tiene igual probabilidad de aparecer.
@@ -457,18 +469,13 @@ static vector<int> gen_inversa(size_t n, int U, uint64_t semilla)
     return a;
 }
 
-// GENERADORES DE DATOS
-// Crean arreglos de prueba con distintas distribuciones:
-// - uniforme
-// - sesgada
-// - ordenada
-// - inversa
-// Sirven para comparar cómo se comportan los algoritmos en
-// diferentes escenarios.
-
 // ================================================================
 //  ESTRUCTURAS DE RESULTADO
 // ================================================================
+
+// Guardan los datos obtenidos en cada experimento:
+// algoritmo, distribución, tamaño N, universo U, correctitud,
+// tiempos, memoria y razón DialSort / QuickSort.
 
 struct FilaResultado {
     string   algoritmo;
@@ -488,15 +495,15 @@ struct ResultadoPar {
     double ratio = 0.0;
 };
 
-// ESTRUCTURAS DE RESULTADO
-// Guardan los datos obtenidos en cada experimento:
-// algoritmo, distribución, tamaño N, universo U, correctitud,
-// tiempos, memoria y razón DialSort / QuickSort.
-
 // ================================================================
 //  BENCHMARK: ejecutar un algoritmo y medir
 // ================================================================
 
+// Ejecuta un algoritmo varias veces:
+// 1. Hace rondas de calentamiento que no se miden.
+// 2. Hace rondas reales de medición.
+// 3. Verifica que el arreglo quede ordenado.
+// 4. Calcula estadísticas.
 using FnOrdenamiento = function<bool(vector<int>&, int)>;
 
 static FilaResultado ejecutar_uno(const string&        algoritmo,
@@ -538,16 +545,17 @@ static FilaResultado ejecutar_uno(const string&        algoritmo,
     return fila;
 }
 
-// BENCHMARK
-// Ejecuta un algoritmo varias veces:
-// 1. Hace rondas de calentamiento que no se miden.
-// 2. Hace rondas reales de medición.
-// 3. Verifica que el arreglo quede ordenado.
-// 4. Calcula estadísticas.
-
 // ================================================================
 //  VISUALIZACION DEL COMPORTAMIENTO INTERNO
 // ================================================================
+
+
+// VISUALIZACIÓN DE DIALSORT
+// Muestra paso a paso cómo DialSort:
+// - genera un arreglo
+// - detecta el rango
+// - construye el histograma
+// - reconstruye el arreglo ordenado
 
 static void visualizar_dialsort(size_t n_vis = 30, int U_vis = 10)
 {
@@ -606,12 +614,11 @@ static void visualizar_dialsort(size_t n_vis = 30, int U_vis = 10)
     cout << "     Ordena leyendo el histograma de menor a mayor.\n";
 }
 
-// VISUALIZACIÓN DE DIALSORT
-// Muestra paso a paso cómo DialSort:
-// - genera un arreglo
-// - detecta el rango
-// - construye el histograma
-// - reconstruye el arreglo ordenado
+// VISUALIZACIÓN DE QUICKSORT
+// Muestra cómo QuickSort:
+// - escoge pivote por mediana de tres
+// - separa menores, iguales y mayores
+// - ordena finalmente el arreglo
 
 static void visualizar_quicksort(size_t n_vis = 20, int U_vis = 50)
 {
@@ -670,15 +677,16 @@ static void visualizar_quicksort(size_t n_vis = 20, int U_vis = 50)
     cout << " ]\n";
 }
 
-// VISUALIZACIÓN DE QUICKSORT
-// Muestra cómo QuickSort:
-// - escoge pivote por mediana de tres
-// - separa menores, iguales y mayores
-// - ordena finalmente el arreglo
 
 // ================================================================
 //  IMPRESION DE TABLAS
 // ================================================================
+
+// Funciones encargadas de mostrar los resultados en consola:
+// - separadores
+// - encabezados
+// - filas normales
+// - filas en formato CSV
 
 static void separador(int ancho = 130)
 {
@@ -756,13 +764,6 @@ static void fila_csv(const FilaResultado& f)
          << (f.correcto ? "OK" : "FALLO") << "\n";
 }
 
-// IMPRESIÓN DE TABLAS
-// Funciones encargadas de mostrar los resultados en consola:
-// - separadores
-// - encabezados
-// - filas normales
-// - filas en formato CSV
-
 // ================================================================
 //  ANALISIS DE COMPLEJIDAD
 // ================================================================
@@ -819,7 +820,7 @@ static bool tiene_arg(int argc, char** argv, const string& arg)
         if (argv[i] == arg) return true;
     return false;
 }
-// ARGUMENTOS DE LÍNEA DE COMANDOS
+
 // Revisa si el usuario ejecutó el programa con opciones como:
 // --rapido
 // --grande
@@ -830,6 +831,14 @@ static bool tiene_arg(int argc, char** argv, const string& arg)
 // ================================================================
 //  MAIN
 // ================================================================
+
+// Controla todo el flujo del programa:
+// 1. Lee argumentos.
+// 2. Activa visualizaciones si se piden.
+// 3. Define tamaños N y universos U.
+// 4. Define distribuciones de prueba.
+// 5. Ejecuta benchmarks.
+// 6. Imprime tablas, resumen, análisis y conclusiones.
 
 int main(int argc, char** argv)
 {
@@ -1105,12 +1114,3 @@ int main(int argc, char** argv)
 
     return todo_correcto ? EXIT_SUCCESS : EXIT_FAILURE;
 }
-
-// MAIN
-// Controla todo el flujo del programa:
-// 1. Lee argumentos.
-// 2. Activa visualizaciones si se piden.
-// 3. Define tamaños N y universos U.
-// 4. Define distribuciones de prueba.
-// 5. Ejecuta benchmarks.
-// 6. Imprime tablas, resumen, análisis y conclusiones.
