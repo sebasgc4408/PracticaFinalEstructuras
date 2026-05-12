@@ -43,6 +43,10 @@
 #include <utility>
 #include <vector>
 
+// LIBRERÍAS Y ESPACIO DE NOMBRES
+// Incluye herramientas de C++ para vectores, archivos, medición de
+// tiempo, generación aleatoria, funciones matemáticas y salida formateada.
+
 using namespace std;
 
 // ================================================================
@@ -54,6 +58,14 @@ static constexpr int      RONDAS_MEDICION      = 7;
 static constexpr uint64_t SEMILLA              = 20260321ULL;
 static constexpr uint64_t MAX_U_DIALSORT       = 10'000'000ULL;
 static constexpr ptrdiff_t CORTE_INSERCION     = 24;
+
+// CONSTANTES GLOBALES
+// Define parámetros fijos del experimento:
+// - rondas de calentamiento
+// - rondas reales de medición
+// - semilla aleatoria
+// - límite máximo del universo para DialSort
+// - tamaño mínimo para usar inserción en QuickSort
 
 // ================================================================
 //  UTILIDADES
@@ -195,6 +207,27 @@ static size_t memoria_quicksort_kb(size_t n)
     return (n * sizeof(int) + static_cast<size_t>(log2(n + 1)) * 64) / 1024;
 }
 
+// UTILIDADES GENERALES
+// Funciones auxiliares para:
+// - medir tiempo en nanosegundos
+// - verificar si un vector quedó ordenado
+// - detectar compilador
+// - leer argumentos de consola
+// - cargar datasets desde archivo
+
+// ESTADÍSTICAS
+// Guarda y calcula métricas del benchmark:
+// - mejor tiempo
+// - tiempo promedio
+// - desviación estándar
+// - throughput en millones de claves por segundo
+
+// ESTIMACIÓN DE MEMORIA
+// Calcula el tamaño del universo U = max - min + 1.
+// También estima la memoria usada por DialSort y QuickSort.
+// DialSort necesita memoria extra para el histograma.
+// QuickSort usa principalmente pila recursiva.
+
 // ================================================================
 //  DIALSORT - Ordenamiento por histograma (Counting Sort / Dial)
 // ================================================================
@@ -243,6 +276,15 @@ static bool dialsort(vector<int>& arreglo)
     }
     return true;
 }
+
+// DIALSORT - COUNTING SORT / HISTOGRAMA
+// Ordena enteros usando conteo de frecuencias.
+// 1. Encuentra mínimo y máximo.
+// 2. Calcula el universo real U.
+// 3. Si U es muy grande, omite el algoritmo.
+// 4. Construye un histograma.
+// 5. Reconstruye el arreglo en orden.
+// Complejidad: O(n + U).
 
 // ================================================================
 //  QUICKSORT - Mediana de tres + particion 3-way
@@ -336,6 +378,27 @@ static bool quicksort(vector<int>& arreglo, int /*U*/)
     return true;
 }
 
+// INSERTION SORT
+// Se usa dentro de QuickSort cuando la partición es pequeña.
+// Para arreglos pequeños suele ser más eficiente que seguir
+// particionando recursivamente.
+
+// MEDIANA DE TRES
+// Escoge como pivote la mediana entre:
+// - primer elemento
+// - elemento central
+// - último elemento
+// Esto reduce la probabilidad del peor caso en QuickSort.
+
+// QUICKSORT 3-WAY
+// Implementa QuickSort con partición en tres zonas:
+// - menores que el pivote
+// - iguales al pivote
+// - mayores que el pivote
+// Es eficiente cuando hay muchos valores repetidos.
+// Además, recurre primero sobre el lado más pequeño para limitar
+// el uso de pila.
+
 // ================================================================
 //  GENERADORES DE DATOS
 // ================================================================
@@ -394,6 +457,15 @@ static vector<int> gen_inversa(size_t n, int U, uint64_t semilla)
     return a;
 }
 
+// GENERADORES DE DATOS
+// Crean arreglos de prueba con distintas distribuciones:
+// - uniforme
+// - sesgada
+// - ordenada
+// - inversa
+// Sirven para comparar cómo se comportan los algoritmos en
+// diferentes escenarios.
+
 // ================================================================
 //  ESTRUCTURAS DE RESULTADO
 // ================================================================
@@ -415,6 +487,11 @@ struct ResultadoPar {
     FilaResultado quicksort;
     double ratio = 0.0;
 };
+
+// ESTRUCTURAS DE RESULTADO
+// Guardan los datos obtenidos en cada experimento:
+// algoritmo, distribución, tamaño N, universo U, correctitud,
+// tiempos, memoria y razón DialSort / QuickSort.
 
 // ================================================================
 //  BENCHMARK: ejecutar un algoritmo y medir
@@ -460,6 +537,13 @@ static FilaResultado ejecutar_uno(const string&        algoritmo,
     fila.stats    = calcular_estadisticas(tiempos, base.size());
     return fila;
 }
+
+// BENCHMARK
+// Ejecuta un algoritmo varias veces:
+// 1. Hace rondas de calentamiento que no se miden.
+// 2. Hace rondas reales de medición.
+// 3. Verifica que el arreglo quede ordenado.
+// 4. Calcula estadísticas.
 
 // ================================================================
 //  VISUALIZACION DEL COMPORTAMIENTO INTERNO
@@ -522,6 +606,13 @@ static void visualizar_dialsort(size_t n_vis = 30, int U_vis = 10)
     cout << "     Ordena leyendo el histograma de menor a mayor.\n";
 }
 
+// VISUALIZACIÓN DE DIALSORT
+// Muestra paso a paso cómo DialSort:
+// - genera un arreglo
+// - detecta el rango
+// - construye el histograma
+// - reconstruye el arreglo ordenado
+
 static void visualizar_quicksort(size_t n_vis = 20, int U_vis = 50)
 {
     cout << "\n";
@@ -578,6 +669,12 @@ static void visualizar_quicksort(size_t n_vis = 20, int U_vis = 50)
     for (int x : arreglo) cout << setw(3) << x;
     cout << " ]\n";
 }
+
+// VISUALIZACIÓN DE QUICKSORT
+// Muestra cómo QuickSort:
+// - escoge pivote por mediana de tres
+// - separa menores, iguales y mayores
+// - ordena finalmente el arreglo
 
 // ================================================================
 //  IMPRESION DE TABLAS
@@ -659,6 +756,13 @@ static void fila_csv(const FilaResultado& f)
          << (f.correcto ? "OK" : "FALLO") << "\n";
 }
 
+// IMPRESIÓN DE TABLAS
+// Funciones encargadas de mostrar los resultados en consola:
+// - separadores
+// - encabezados
+// - filas normales
+// - filas en formato CSV
+
 // ================================================================
 //  ANALISIS DE COMPLEJIDAD
 // ================================================================
@@ -701,6 +805,10 @@ static void imprimir_analisis_complejidad()
             "                     U pequenho, especialmente para n moderado.\n";
 }
 
+// ANÁLISIS DE COMPLEJIDAD
+// Imprime una explicación teórica de DialSort y QuickSort:
+// tiempos, espacio, estabilidad, ventajas y casos ideales.
+
 // ================================================================
 //  ARGUMENTOS DE LINEA DE COMANDOS
 // ================================================================
@@ -711,6 +819,13 @@ static bool tiene_arg(int argc, char** argv, const string& arg)
         if (argv[i] == arg) return true;
     return false;
 }
+// ARGUMENTOS DE LÍNEA DE COMANDOS
+// Revisa si el usuario ejecutó el programa con opciones como:
+// --rapido
+// --grande
+// --csv
+// --visualizar
+// --archivo
 
 // ================================================================
 //  MAIN
@@ -990,3 +1105,12 @@ int main(int argc, char** argv)
 
     return todo_correcto ? EXIT_SUCCESS : EXIT_FAILURE;
 }
+
+// MAIN
+// Controla todo el flujo del programa:
+// 1. Lee argumentos.
+// 2. Activa visualizaciones si se piden.
+// 3. Define tamaños N y universos U.
+// 4. Define distribuciones de prueba.
+// 5. Ejecuta benchmarks.
+// 6. Imprime tablas, resumen, análisis y conclusiones.
